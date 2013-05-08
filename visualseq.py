@@ -8,7 +8,8 @@ Run with -h to see the options.'''
 __author__ = 'Igor Rodrigues da Costa'
 __copyright__ = "Copyright 2012-2013, Igor Rodrigues da Costa"
 __contact__ = 'igor.bioinfo@gmail.com'
-__licence__ = '''Permission to use, copy, modify, and distribute this software and its
+__licence__ = '''
+Permission to use, copy, modify, and distribute this software and its
 documentation with or without modifications and for any purpose and
 without fee is hereby granted, provided that any copyright notices
 appear in all copies and that both those copyright notices and this
@@ -118,12 +119,12 @@ for x in BLOSUM.keys():
         ID_MATRIX[x] = 0
 
 def argument_parser(h = False):
-    '''visualseq.py f1.fasta f2.fasta f3.fasta -o outfile.png -t Title -m Matrix -a Filter
+    '''visualseq.py -i f1.fasta f2.fasta f3.fasta -o outfile.png -t Title -m Matrix -a Filter
     '''
     parser = argparse.ArgumentParser(description = 'Prints an image comparing 3 multiple alignment files (1 group for file). \
                                      All sequences must have the same lenght.',\
                                      argument_default = None)
-    parser.add_argument('file', nargs = 3, type = argparse.FileType('rb'),\
+    parser.add_argument('-i', '--infile', nargs = 3, type = argparse.FileType('rb'),\
                         help = '3 multiple alignment fasta files (not necessarily the same number \
                         of sequences in every file, but every sequence must have the same size).')
     parser.add_argument('-o', '--outfile', nargs = '?', type = str, default = 'outfile.png',\
@@ -139,7 +140,10 @@ def argument_parser(h = False):
     if h:
         args = parser.parse_args(['-h'])
     else:
-        args = parser.parse_args().__dict__
+        try:
+            args = parser.parse_args().__dict__
+        except:
+            pass
     
     
     return args
@@ -268,15 +272,16 @@ def run(path, matrix, alpha = 0.05, lowpass = True, intra = False):
     return x1, y1, x2, y2, x3, y3    
         
 if  __name__ == "__main__":
-    try:
-        args = argument_parser()
-    except Exception:
+    args = argument_parser()
+    print args['infile']
+    if not args['infile'] or len(args['infile']) < 3:
+        print 'too few fasta files (need 3)'
         argument_parser(h = True)
     if args['matrix'] == 'BLOSUM':
         matrix = BLOSUM
     elif args['matrix'] == 'ID_MATRIX':
         matrix = ID_MATRIX
-    x1, y1, x2, y2, x3, y3 = run(args['file'], matrix, args['alpha'], not args['no_lowpass'])
+    x1, y1, x2, y2, x3, y3 = run(args['infile'], matrix, args['alpha'], not args['no_lowpass'])
     rcParams['figure.figsize'] = 16, 8
     plot(x1, y1, '#009999', x2, y2, '#990099', x3, y3, '#999900', linewidth= 1.3)
     title(args['title'])
