@@ -121,6 +121,7 @@ for x in BLOSUM.keys():
 def argument_parser(h = False):
     '''visualseq.py -i f1.fasta f2.fasta f3.fasta -o outfile.png -t Title -m Matrix -a Filter
     '''
+    
     parser = argparse.ArgumentParser(description = 'Prints an image comparing 3 multiple alignment files (1 group for file). \
                                      All sequences must have the same lenght.',\
                                      argument_default = None)
@@ -136,16 +137,14 @@ def argument_parser(h = False):
     parser.add_argument('-m', '--matrix', nargs = '?', type = str, choices = ['BLOSUM', 'ID_MATRIX'], default = 'BLOSUM',\
                         help = 'Comparison matrix to be used. (options: %(choices)s, defaut: %(default)s)')
     parser.add_argument('-n', '--no_lowpass', action = 'store_true', help = 'Disable the low_pass filter.')
-
     if h:
         args = parser.parse_args(['-h'])
     else:
         try:
             args = parser.parse_args().__dict__
         except:
-            pass
-    
-    
+            args = parser.parse_args(['-h'])
+            raise
     return args
 
 def fasta_parser(fasta_file):
@@ -218,23 +217,18 @@ def lowpass(dlist, a = 0.05):
 def run(path, matrix, alpha = 0.05, lowpass = True, intra = False):
     
     rr = []
-    if type(path) == list:
-        listaseq1 = fasta_parser(path[0])
-        listaseq2 = fasta_parser(path[1])
-        listaseq3 = fasta_parser(path[2])
-    else:
-        try:
-            listaseq1 = fasta_parser(path + 'p.fas')
-        except:
-            listaseq1 = []
-        try:
-            listaseq2 = fasta_parser(path + 'f.fas')
-        except:
-            listaseq2 = []
-        try:
-            listaseq3 = fasta_parser(path + 'm.fas')
-        except:
-            listaseq3 = []
+    try:
+        listaseq1 = fasta_parser(path + 'p.fas')
+    except:
+        listaseq1 = []
+    try:
+        listaseq2 = fasta_parser(path + 'f.fas')
+    except:
+        listaseq2 = []
+    try:
+        listaseq3 = fasta_parser(path + 'm.fas')
+    except:
+        listaseq3 = []
     if intra:
         if len(listaseq1) > 0 and len(listaseq2) > 0:
             y1 = comparador(listaseq1, listaseq1, matrix)
@@ -273,7 +267,6 @@ def run(path, matrix, alpha = 0.05, lowpass = True, intra = False):
         
 if  __name__ == "__main__":
     args = argument_parser()
-    print args['infile']
     if not args['infile'] or len(args['infile']) < 3:
         print 'too few fasta files (need 3)'
         argument_parser(h = True)
