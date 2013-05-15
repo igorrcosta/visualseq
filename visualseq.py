@@ -119,24 +119,35 @@ for x in BLOSUM.keys():
         ID_MATRIX[x] = 0
 
 def argument_parser(h = False):
-    '''visualseq.py -i f1.fasta f2.fasta f3.fasta -o outfile.png -t Title -m Matrix -a Filter
+    '''visualseq.py -i f1.fasta f2.fasta f3.fasta -o outfile.png -t Title -m Matrix -a Filter -x Xlim
     '''
     
     parser = argparse.ArgumentParser(description = 'Prints an image comparing 3 multiple alignment files (1 group for file). \
                                      All sequences must have the same lenght.',\
                                      argument_default = None)
-    parser.add_argument('-i', '--infile', nargs = 3, type = argparse.FileType('rb'),\
+    parser.add_argument('-i', '--infile', nargs = 3, metavar = ('f1.fasta', 'f2.fasta', 'f3.fasta'), type = argparse.FileType('rb'),\
                         help = '3 multiple alignment fasta files (not necessarily the same number \
                         of sequences in every file, but every sequence must have the same size).')
-    parser.add_argument('-o', '--outfile', nargs = '?', type = str, default = 'outfile.png',\
+    parser.add_argument('-o', '--outfile', nargs = '?', metavar = 'outfile', type = str, default = 'outfile.png',\
                         help = 'file where the image will be saved. (defaut: %(default)s)')
-    parser.add_argument('-t', '--title', nargs = '?', type = str, default = 'Title',\
+    parser.add_argument('-t', '--title', nargs = '?', metavar = '\'Title\'', type = str, default = 'Title',\
                         help = 'Title of the image. (defaut: %(default)s)')
-    parser.add_argument('-a', '--alpha', nargs = '?', type = float, default = 0.05,\
+    parser.add_argument('-a', '--alpha', nargs = '?', metavar = 'alpha', type = float, default = 0.05,\
                         help = 'Value of the alpha parameter of the low-pass filter, lower means smoother. (defaut: %(default)s)')
-    parser.add_argument('-m', '--matrix', nargs = '?', type = str, choices = ['BLOSUM', 'ID_MATRIX'], default = 'BLOSUM',\
+    parser.add_argument('-m', '--matrix', nargs = '?', metavar = 'matrix', type = str, choices = ['BLOSUM', 'ID_MATRIX'], default = 'BLOSUM',\
                         help = 'Comparison matrix to be used. (options: %(choices)s, defaut: %(default)s)')
+    parser.add_argument('-x', '--xlim', nargs = 2, metavar = ('start', 'end'), type = float, default = [0, -1],\
+                        help = 'Limit values for the start and end of the x axis,'\
+                        + 'negative values (or no values) set it to automatic. Both values must be numbers. (defaut: %(default)s)')
+    parser.add_argument('-y', '--ylim', nargs = 2, metavar = ('start', 'end'), type = float, default = [0, -1],\
+                        help = 'Limit values for the start and end of the y axis,'\
+                        + 'negative values (or no values) set it to automatic. Both values must be numbers. (defaut: %(default)s)')
+    parser.add_argument('-f', '--font_size', nargs = '?', metavar = 'size', type = int, default = 18,\
+                        help = 'Font size of the axis labels and title. (defaut: %(default)s)')
+    parser.add_argument('-s', '--size', nargs = 2, metavar = ('width', 'height'), type = int, default = [16, 8],\
+                        help = 'Size of the figure, Width Height. (defaut: %(default)s)')
     parser.add_argument('-n', '--no_lowpass', action = 'store_true', help = 'Disable the low_pass filter.')
+
     if h:
         args = parser.parse_args(['-h'])
     else:
@@ -214,47 +225,24 @@ def lowpass(dlist, a = 0.05):
     alist[-1] = alist[-2]
     return alist
 
-def run(path, matrix, alpha = 0.05, lowpass = True, intra = False):
+def run(path, matrix, alpha = 0.05, lowpass = True):
     
     rr = []
-    try:
-        listaseq1 = fasta_parser(path + 'p.fas')
-    except:
-        listaseq1 = []
-    try:
-        listaseq2 = fasta_parser(path + 'f.fas')
-    except:
-        listaseq2 = []
-    try:
-        listaseq3 = fasta_parser(path + 'm.fas')
-    except:
-        listaseq3 = []
-    if intra:
-        if len(listaseq1) > 0 and len(listaseq2) > 0:
-            y1 = comparador(listaseq1, listaseq1, matrix)
-        else:
-            y1 = []
-        if len(listaseq2) > 0 and len(listaseq3) > 0:
-            y2 = comparador(listaseq2, listaseq2, matrix)
-        else:
-            y2 = []
-        if len(listaseq1) > 0 and len(listaseq3) > 0:
-            y3 = comparador(listaseq3, listaseq3, matrix)
-        else:
-            y3 = []
-    if not intra:
-        if len(listaseq1) > 0 and len(listaseq2) > 0:
-            y1 = comparador(listaseq1, listaseq2, matrix)
-        else:
-            y1 = []
-        if len(listaseq2) > 0 and len(listaseq3) > 0:
-            y2 = comparador(listaseq2, listaseq3, matrix)
-        else:
-            y2 = []
-        if len(listaseq1) > 0 and len(listaseq3) > 0:
-            y3 = comparador(listaseq1, listaseq3, matrix)
-        else:
-            y3 = []
+    listaseq1 = fasta_parser(path[0])
+    listaseq2 = fasta_parser(path[1])
+    listaseq3 = fasta_parser(path[2])
+    if len(listaseq1) > 0 and len(listaseq2) > 0:
+        y1 = comparador(listaseq1, listaseq2, matrix)
+    else:
+        y1 = []
+    if len(listaseq2) > 0 and len(listaseq3) > 0:
+        y2 = comparador(listaseq2, listaseq3, matrix)
+    else:
+        y2 = []
+    if len(listaseq1) > 0 and len(listaseq3) > 0:
+        y3 = comparador(listaseq1, listaseq3, matrix)
+    else:
+        y3 = []
     if lowpass:
         y1 = avg_lowpass(y1, alpha)
         y2 = avg_lowpass(y2, alpha)
@@ -275,8 +263,15 @@ if  __name__ == "__main__":
     elif args['matrix'] == 'ID_MATRIX':
         matrix = ID_MATRIX
     x1, y1, x2, y2, x3, y3 = run(args['infile'], matrix, args['alpha'], not args['no_lowpass'])
-    rcParams['figure.figsize'] = 16, 8
+    rcParams['figure.figsize'] = args['size'] #16, 8
     plot(x1, y1, '#009999', x2, y2, '#990099', x3, y3, '#999900', linewidth= 1.3)
     title(args['title'])
+    xlimit = args['xlim']
+    ylimit = args['ylim']
+    if (xlimit[0] >= 0 and xlimit[1] > 0) and (type(xlimit[0]) == type(xlimit[1]) == float):
+        xlim(xlimit)
+    if (ylimit[0] >= 0 and ylimit[1] > 0) and (type(ylimit[0]) == type(ylimit[1]) == float):
+        ylim(ylimit)
+    rcParams.update({'font.size': args['font_size']})
     savefig(args['outfile'], bbox_inches=0)
     show()
