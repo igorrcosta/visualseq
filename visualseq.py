@@ -29,7 +29,7 @@ OR PERFORMANCE OF THIS SOFTWARE.'''
 
 import argparse
 from matplotlib.pyplot import show, plot, title, ylim, xlim, savefig, rcParams, clf
-
+from os.path import isfile
 
 ID_NUC = {
 ('T', 'T') : 1, ('A', 'A') : 1, ('G', 'G') : 1, ('C', 'C') : 1,
@@ -118,14 +118,14 @@ for x in BLOSUM.keys():
     else:
         ID_MATRIX[x] = 0
 
-def argument_parser(h = False):
+def argument_parser(h = False, args = []):
     '''visualseq.py -i f1.fasta f2.fasta f3.fasta -o outfile.png -t Title -m Matrix -a Filter -x Xlim
     '''
     
     parser = argparse.ArgumentParser(description = 'Prints an image comparing 3 multiple alignment files (1 group for file). \
                                      All sequences must have the same lenght.',\
                                      argument_default = None)
-    parser.add_argument('-i', '--infile', nargs = 3, metavar = ('f1.fasta', 'f2.fasta', 'f3.fasta'), type = argparse.FileType('rb'),\
+    parser.add_argument('-i', '--infile', nargs = 3, metavar = ('f1.fasta', 'f2.fasta', 'f3.fasta'), type = str,\
                         help = '3 multiple alignment fasta files (not necessarily the same number \
                         of sequences in every file, but every sequence must have the same size).')
     parser.add_argument('-o', '--outfile', nargs = '?', metavar = 'outfile', type = str, default = 'outfile.png',\
@@ -151,17 +151,24 @@ def argument_parser(h = False):
     if h:
         args = parser.parse_args(['-h'])
     else:
-        try:
-            args = parser.parse_args().__dict__
-        except:
-            args = parser.parse_args(['-h'])
-            raise
+##        try:
+            if args:
+                args = parser.parse_args(args).__dict__
+            else:
+                args = parser.parse_args().__dict__
+##        except:
+##            args = parser.parse_args(['-h'])
+##            raise
     return args
 
 def fasta_parser(fasta_file):
+    if not isfile(fasta_file):
+        print fasta_file, 'is not a file.'
+        return []
     seq_dict = {}
     seq = ''
-    with fasta_file as f:
+    seq_id = ''
+    with open(fasta_file, 'r') as f:
         for seq_line in f.readlines():
             if seq_line[0] == '>':
                 if seq:
@@ -170,7 +177,10 @@ def fasta_parser(fasta_file):
                 seq = ''
             else:
                 seq += seq_line[:-1]
-        seq_dict[seq_id] = seq
+        if seq_id:
+            seq_dict[seq_id] = seq
+        else:
+            return []
     return seq_dict.values()
 
 def comparador(lseq1, lseq2, matrix):
@@ -269,6 +279,7 @@ def ploter(x1, y1, x2, y2, x3, y3, args):
     rcParams.update({'font.size': args['font_size']})
     savefig(args['outfile'], bbox_inches=0)
     show()
+    clf()
     
 if  __name__ == "__main__":
     #test: python visualseq.py -i m.fas f.fas p.fas -o out_test.png -t 'Test' -x 0 120
