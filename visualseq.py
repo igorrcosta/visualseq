@@ -282,7 +282,7 @@ def ploter(x1, y1, x2, y2, x3, y3, args):
     clf()
     
 if  __name__ == "__main__":
-    #test: python visualseq.py -i m.fas f.fas p.fas -o out_test.png -t 'Test' -x 0 120
+    #test: python visualseq.py -i ./test/m.fas ./test/f.fas ./test/p.fas -o ./test/out_test.png -t 'Test' -x 0 120
     args = argument_parser()
     if not args['infile'] or len(args['infile']) < 3:
         print 'too few fasta files (need 3)'
