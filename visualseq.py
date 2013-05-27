@@ -226,7 +226,10 @@ def lowpass(dlist, a = 0.05):
     return alist
 
 def run(path, matrix, alpha = 0.05, lowpass = True):
-    
+    if matrix == 'BLOSUM':
+        matrix = BLOSUM
+    elif matrix == 'ID_MATRIX':
+        matrix = ID_MATRIX
     rr = []
     listaseq1 = fasta_parser(path[0])
     listaseq2 = fasta_parser(path[1])
@@ -252,17 +255,8 @@ def run(path, matrix, alpha = 0.05, lowpass = True):
     x3 = range(len(y3))
         
     return x1, y1, x2, y2, x3, y3    
-        
-if  __name__ == "__main__":
-    args = argument_parser()
-    if not args['infile'] or len(args['infile']) < 3:
-        print 'too few fasta files (need 3)'
-        argument_parser(h = True)
-    if args['matrix'] == 'BLOSUM':
-        matrix = BLOSUM
-    elif args['matrix'] == 'ID_MATRIX':
-        matrix = ID_MATRIX
-    x1, y1, x2, y2, x3, y3 = run(args['infile'], matrix, args['alpha'], not args['no_lowpass'])
+
+def ploter(x1, y1, x2, y2, x3, y3, args):
     rcParams['figure.figsize'] = args['size'] #16, 8
     plot(x1, y1, '#009999', x2, y2, '#990099', x3, y3, '#999900', linewidth= 1.3)
     title(args['title'])
@@ -275,3 +269,13 @@ if  __name__ == "__main__":
     rcParams.update({'font.size': args['font_size']})
     savefig(args['outfile'], bbox_inches=0)
     show()
+    
+if  __name__ == "__main__":
+    #test: python visualseq.py -i m.fas f.fas p.fas -o out_test.png -t 'Test' -x 0 120
+    args = argument_parser()
+    if not args['infile'] or len(args['infile']) < 3:
+        print 'too few fasta files (need 3)'
+        argument_parser(h = True)
+    x1, y1, x2, y2, x3, y3 = run(args['infile'], args['matrix'], args['alpha'], not args['no_lowpass'])
+    ploter(x1, y1, x2, y2, x3, y3, args)
+
