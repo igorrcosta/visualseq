@@ -151,14 +151,14 @@ def argument_parser(h = False, args = []):
     if h:
         args = parser.parse_args(['-h'])
     else:
-##        try:
+        try:
             if args:
                 args = parser.parse_args(args).__dict__
             else:
                 args = parser.parse_args().__dict__
-##        except:
-##            args = parser.parse_args(['-h'])
-##            raise
+        except:
+            args = parser.parse_args(['-h'])
+            raise
     return args
 
 def fasta_parser(fasta_file):
