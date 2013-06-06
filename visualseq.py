@@ -28,8 +28,9 @@ OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
 OR PERFORMANCE OF THIS SOFTWARE.'''
 
 import argparse
-from matplotlib.pyplot import show, plot, title, ylim, xlim, savefig, rcParams, clf
 from os.path import isfile
+from matplotlib.pyplot import show, plot, title, ylim, xlim, savefig, rcParams, clf
+
 
 ID_NUC = {
 ('T', 'T') : 1, ('A', 'A') : 1, ('G', 'G') : 1, ('C', 'C') : 1,
@@ -136,12 +137,12 @@ def argument_parser(h = False, args = []):
                         help = 'Value of the alpha parameter of the low-pass filter, lower means smoother. (defaut: %(default)s)')
     parser.add_argument('-m', '--matrix', nargs = '?', metavar = 'matrix', type = str, choices = ['BLOSUM', 'ID_MATRIX'], default = 'BLOSUM',\
                         help = 'Comparison matrix to be used. (options: %(choices)s, defaut: %(default)s)')
-    parser.add_argument('-x', '--xlim', nargs = 2, metavar = ('start', 'end'), type = float, default = [0, -1],\
-                        help = 'Limit values for the start and end of the x axis,'\
-                        + 'negative values (or no values) set it to automatic. Both values must be numbers. (defaut: %(default)s)')
-    parser.add_argument('-y', '--ylim', nargs = 2, metavar = ('start', 'end'), type = float, default = [0, -1],\
-                        help = 'Limit values for the start and end of the y axis,'\
-                        + 'negative values (or no values) set it to automatic. Both values must be numbers. (defaut: %(default)s)')
+    parser.add_argument('-x', '--xlim', nargs = 2, metavar = ('start', 'end'), type = float, default = [0, 0],\
+                        help = 'Limit values for the start and end of the x axis.'\
+                        + 'If not specified, it is set to automatic. Both values must be numbers. (defaut: %(default)s)')
+    parser.add_argument('-y', '--ylim', nargs = 2, metavar = ('start', 'end'), type = float, default = [0, 0],\
+                        help = 'Limit values for the start and end of the y axis.'\
+                        + 'If not specified, it is set to automatic. Both values must be numbers. (defaut: %(default)s)')
     parser.add_argument('-f', '--font_size', nargs = '?', metavar = 'size', type = int, default = 18,\
                         help = 'Font size of the axis labels and title. (defaut: %(default)s)')
     parser.add_argument('-s', '--size', nargs = 2, metavar = ('width', 'height'), type = int, default = [16, 8],\
@@ -204,14 +205,15 @@ def comparador(lseq1, lseq2, matrix):
     p = max(pon)
     for m, n in zip(mut, pon):
         if n != 0:
-            i = float(m)/p
+            i = float(m)/n
             comp.append(i)
         else:
+##            comp.append(None)
             try:
                 comp.append(comp[-1])
             except IndexError:
                 comp.append(0)
-    return comp
+    return comp, pon
 
 
 def avg_lowpass(dlist, a = 0.05):
@@ -220,19 +222,53 @@ def avg_lowpass(dlist, a = 0.05):
     alist_reverse = lowpass(dlist, a)
     alist_reverse.reverse()
     alist_avg = []
+    last = None
     for n, m in zip(alist, alist_reverse):
-        avg = (float(n) + m)/2
+        if n is not None and m is not None:
+            avg = (float(n) + m)/2
+            last = avg
+        else:
+            avg = last
         alist_avg.append(avg)
+        #alist_avg.append((n,m))
     return alist_avg
 
-def lowpass(dlist, a = 0.05):
+def old_lowpass(dlist, a = 0.05):
     if len(dlist) == 0:
         return dlist
     alist = [0] * len(dlist)
-    for n, i in enumerate(dlist[:-1]):
-        alist[n+1] = i * a + (1 - a) * alist[n]
-    alist[0] = alist[1]
-    alist[-1] = alist[-2]
+    alist[0] = dlist[0]
+    for p, i in enumerate(dlist[1:]):
+        n = p + 1
+        alist[n] = i * a + (1 - a) * alist[n-1]
+    return alist
+
+def lowpass(dlist, a = 0.05):
+    if len(dlist) == 0:
+        return []
+    nones = 0
+    start = 0
+    alist = [0] * len(dlist)
+    for n, i in enumerate(dlist):
+        if i is not None:
+            alist[n] = i
+            start = n + 1
+            break
+        alist[n] = None
+    if alist[n] is None:
+        return alist
+    for p, i in enumerate(dlist[start:]):
+        n = p + start
+        if i is None:
+            nones += 1
+            alist[n] = None
+        elif nones > 0:
+            last = alist[n - (nones + 1)]
+            last = last * pow((1 - a), nones)
+            alist[n] = i * a + last
+            nones = 0
+        else:
+            alist[n] = i * a + (1 - a) * alist[n-1]
     return alist
 
 def run(path, matrix, alpha = 0.05, lowpass = True):
@@ -245,48 +281,89 @@ def run(path, matrix, alpha = 0.05, lowpass = True):
     listaseq2 = fasta_parser(path[1])
     listaseq3 = fasta_parser(path[2])
     if len(listaseq1) > 0 and len(listaseq2) > 0:
-        y1 = comparador(listaseq1, listaseq2, matrix)
+        y1, n1 = comparador(listaseq1, listaseq2, matrix)
     else:
         y1 = []
+        n1 = []
     if len(listaseq2) > 0 and len(listaseq3) > 0:
-        y2 = comparador(listaseq2, listaseq3, matrix)
+        y2, n2 = comparador(listaseq2, listaseq3, matrix)
     else:
         y2 = []
+        n2 = []
     if len(listaseq1) > 0 and len(listaseq3) > 0:
-        y3 = comparador(listaseq1, listaseq3, matrix)
+        y3, n3 = comparador(listaseq1, listaseq3, matrix)
     else:
         y3 = []
+        n3 = []
     if lowpass:
         y1 = avg_lowpass(y1, alpha)
         y2 = avg_lowpass(y2, alpha)
         y3 = avg_lowpass(y3, alpha)
-    x1 = range(len(y1))
-    x2 = range(len(y2))
-    x3 = range(len(y3))
-        
-    return x1, y1, x2, y2, x3, y3    
+    x1 = [x + 1 for x in range(len(y1))]
+    x2 = [x + 1 for x in range(len(y2))]
+    x3 = [x + 1 for x in range(len(y3))]
+    plot1 = [(px1, py1) for px1, py1 in zip(x1, y1)]
+    plot2 = [(px2, py2) for px2, py2 in zip(x2, y2)]
+    plot3 = [(px3, py3) for px3, py3 in zip(x3, y3)]
+    return plot1, n1, plot2, n2, plot3, n3   
 
-def ploter(x1, y1, x2, y2, x3, y3, args):
+def ploter(plot1, cv1, plot2, cv2, plot3, cv3, args):
     rcParams['figure.figsize'] = args['size'] #16, 8
-    plot(x1, y1, '#009999', x2, y2, '#990099', x3, y3, '#999900', linewidth= 1.3)
+    floor = 1
+    factor = 0.9
+    gap = 0.4
+    points = len(plot1)
+    limit_cv = float(max(cv1))
+    for n, c in zip(xrange(points - 1), cv1):
+        if c != 0:
+            intensity = factor * (floor + ((c * (1-floor))/limit_cv))
+        else:
+            intensity = gap
+        plot([plot1[n][0], plot1[n+1][0]], [plot1[n][1], plot1[n+1][1]], color = (0, intensity, intensity))
+    points = len(plot2)
+    limit_cv = float(max(cv2))
+    for n, c in zip(xrange(points - 1), cv2):
+        if c != 0:
+            intensity = factor * (floor + ((c * (1-floor))/limit_cv))
+        else:
+            intensity = gap
+        plot([plot2[n][0], plot2[n+1][0]], [plot2[n][1], plot2[n+1][1]], color = (intensity, 0, intensity))
+    points = len(plot3)
+    limit_cv = float(max(cv3))
+    for n, c in zip(xrange(points - 1), cv3):
+        if c != 0:
+            intensity = factor * (floor + ((c * (1-floor))/limit_cv))
+        else:
+            intensity = gap
+        plot([plot3[n][0], plot3[n+1][0]], [plot3[n][1], plot3[n+1][1]], color = (intensity, intensity, 0))
+    #plot(x1, y1, '#009999', x2, y2, '#990099', x3, y3, '#999900', linewidth= 1.3)
     title(args['title'])
     xlimit = args['xlim']
     ylimit = args['ylim']
-    if (xlimit[0] >= 0 and xlimit[1] > 0) and (type(xlimit[0]) == type(xlimit[1]) == float):
+    if (xlimit[0] != 0 and xlimit[1] != 0) and (type(xlimit[0]) == type(xlimit[1]) == float):
         xlim(xlimit)
-    if (ylimit[0] >= 0 and ylimit[1] > 0) and (type(ylimit[0]) == type(ylimit[1]) == float):
+    else:
+        xlimit = (1, max([len(plot1), len(plot2), len(plot3)]))
+        xlim(xlimit)
+    if (ylimit[0] != 0 and ylimit[1] != 0) and (type(ylimit[0]) == type(ylimit[1]) == float):
         ylim(ylimit)
+##    else:
+##        ny = [y for y in y1 + y2 + y3 if y is not None]
+##        ylimit = (min(ny) - 1, max(ny) + 1)
+##        ylim(ylimit)
     rcParams.update({'font.size': args['font_size']})
     savefig(args['outfile'], bbox_inches=0)
     show()
     clf()
     
 if  __name__ == "__main__":
-    #test: python visualseq.py -i ./test/m.fas ./test/f.fas ./test/p.fas -o ./test/out_test.png -t 'Test' -x 0 120
+    #test: python visualseq.py -i ./test/p.fas ./test/f.fas ./test/m.fas -o ./test/out_test.png -t 'Test'
+##    1 = green, blue (1, 2)
+##    2 = blue, red (2, 3)
+##    3 = green, red (1, 3)
     args = argument_parser()
-    if not args['infile'] or len(args['infile']) < 3:
+    if not args['infile'] or len(args['infile']) < 2:
         print 'too few fasta files (need 3)'
         argument_parser(h = True)
-    x1, y1, x2, y2, x3, y3 = run(args['infile'], args['matrix'], args['alpha'], not args['no_lowpass'])
-    ploter(x1, y1, x2, y2, x3, y3, args)
-
+    plot1, n1, plot2, n2, plot3, n3 = run(args['infile'], args['matrix'], args['alpha'], not args['no_lowpass'])
+    ploter(plot1, n1, plot2, n2, plot3, n3, args)
