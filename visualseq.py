@@ -185,7 +185,6 @@ def fasta_parser(fasta_file):
     return seq_dict.values()
 
 def comparador(lseq1, lseq2, matrix):
-    mut, pon, comp, temp = [], [], [], []
     try:
         size = len(lseq1[0])
     except:
@@ -203,6 +202,7 @@ def comparador(lseq1, lseq2, matrix):
                     mut[n] += bmt
                     pon[n] += 1
     p = max(pon)
+    comp = []
     for m, n in zip(mut, pon):
         if n != 0:
             i = float(m)/n
