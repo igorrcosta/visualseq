@@ -329,35 +329,20 @@ def ploter(plot1, cv1, plot2, cv2, plot3, cv3, args):
     floor = 1
     factor = 0.9
     gap = 0.4
-    points = len(plot1)
-    limit_cv = float(max(cv1))
-    for n, c in zip(xrange(points - 1), cv1):
-        if c != 0:
-            intensity = factor * (floor + ((c * (1 - floor)) / limit_cv))
-        else:
-            intensity = gap
-        plot([plot1[n][0], plot1[n + 1][0]],
-             [plot1[n][1], plot1[n + 1][1]], color=(0, intensity, intensity))
-    points = len(plot2)
-    limit_cv = float(max(cv2))
-    for n, c in zip(xrange(points - 1), cv2):
-        if c != 0:
-            intensity = factor * (floor + ((c * (1 - floor)) / limit_cv))
-        else:
-            intensity = gap
-        plot([plot2[n][0], plot2[n + 1][0]], [plot2[n][1], plot2[n + 1][1]],
-             color=(intensity, 0, intensity))
-    points = len(plot3)
-    limit_cv = float(max(cv3))
-    for n, c in zip(xrange(points - 1), cv3):
-        if c != 0:
-            intensity = factor * (floor + ((c * (1 - floor)) / limit_cv))
-        else:
-            intensity = gap
-        plot([plot3[n][0], plot3[n + 1][0]],
-             [plot3[n][1], plot3[n + 1][1]], color=(intensity, intensity, 0))
-    # plot(x1, y1, '#009999', x2, y2, '#990099', x3, y3, '#999900', linewidth=
-    # 1.3)
+    for i, (p, cv) in enumerate([(plot1, cv1), (plot2, cv2), (plot3, cv3)]):
+        points = len(p)
+        limit_cv = float(max(cv))
+        for n, c in zip(xrange(points - 1), cv):
+            if c != 0:
+                intensity = factor * (floor + ((c * (1 - floor)) / limit_cv))
+            else:
+                intensity = gap
+            color = [intensity,]*3
+            color[i] = 0
+            color = tuple(color)
+            plot([p[n][0], p[n + 1][0]], [p[n][1], p[n + 1][1]], color = color)
+    
+    # plot(x1, y1, '#009999', x2, y2, '#990099', x3, y3, '#999900', linewidth=1.3)
     title(args['title'])
     xlimit = args['xlim']
     ylimit = args['ylim']
@@ -368,10 +353,6 @@ def ploter(plot1, cv1, plot2, cv2, plot3, cv3, args):
         xlim(xlimit)
     if (ylimit[0] != 0 and ylimit[1] != 0) and (type(ylimit[0]) == type(ylimit[1]) == float):
         ylim(ylimit)
-# else:
-# ny = [y for y in y1 + y2 + y3 if y is not None]
-# ylimit = (min(ny) - 1, max(ny) + 1)
-# ylim(ylimit)
     rcParams.update({'font.size': args['font_size']})
     savefig(args['outfile'], bbox_inches=0)
     show()
