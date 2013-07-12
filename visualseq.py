@@ -29,6 +29,7 @@ OR PERFORMANCE OF THIS SOFTWARE.'''
 
 import argparse
 from os.path import isfile
+from itertools import permutations
 from matplotlib.pyplot import show, plot, title, ylim, xlim, savefig, rcParams, clf
 
 
@@ -286,7 +287,12 @@ def lowpass(dlist, a=0.05):
             alist[n] = i * a + (1 - a) * alist[n - 1]
     return alist
 
-
+def permutation_test(lseq1, lseq2, matrix):
+    l = len(lseq1)
+    results = []
+    for perm in permutations(lseq1 + lseq2):
+        results = comparador(perm[:l], perm[l:], matrix)
+        
 def run(path, matrix, alpha=0.05, lowpass=True):
     if matrix == 'BLOSUM':
         matrix = BLOSUM
