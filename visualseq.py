@@ -128,10 +128,11 @@ def argument_parser(h=False, args=[]):
     parser = argparse.ArgumentParser(description='Prints an image comparing 3 multiple alignment files (1 group for file). \
                                      All sequences must have the same lenght.',
                                      argument_default=None)
+    #número qualquer de argumentos...
     parser.add_argument(
-        '-i', '--infile', nargs=3, metavar=('f1.fasta', 'f2.fasta', 'f3.fasta'), type = str,
+        '-i', '--infile', nargs='+', type = str, metavar='fasta_files',
         help = '3 multiple alignment fasta files (not necessarily the same number \
-                        of sequences in every file, but every sequence must have the same size).')
+        of sequences in every file, but every sequence must have the same size).')
     parser.add_argument(
         '-o', '--outfile', nargs='?', metavar='outfile', type=str, default='outfile.png',
         help='file where the image will be saved. (defaut: %(default)s)')
@@ -212,27 +213,27 @@ def permutation_test(path, pvalue, matrix, step):
     lseq1 = fasta_parser(path[0])
     lseq2 = fasta_parser(path[1])
     assert len(lseq1) > 0 and len(lseq2) > 0
-    l = len(lseq1)
+    L = len(lseq1)
     len_seq = len(lseq1[0])
     results = {}
     mean_results = {}
     if step == 0:
         step = len_seq
     for jan in range(0, len_seq, step):
-        results[jan] = 0
-        mean_results[jan] = 0
-        n = 0 
+        results[jan] = []
+        n = 0
         for perm in permutations(lseq1 + lseq2):
-            for s1 in perm[:l]:
-                for s2 in perm[l:]:
-                    results[jan] += _janela(s1[jan:jan+step],
-                                            s2[jan:jan+step], matrix)
+            for s1 in perm[:L]:
+                for s2 in perm[L:]:
+                    results[jan].append(_janela(s1[jan:jan+step],
+                                        s2[jan:jan+step], matrix))
                     n += 1
-        mean_results[jan] = results[jan]/n
-    top_5 = results.values()
-    top_5.sort()
-    #top_5 = top_5[:-5]
-    print top_5
+    print n
+    p_limit = int(n * pvalue)
+    print p_limit
+    top_5 = sorted(results[jan])[p_limit]
+    bop_5 = sorted(results[jan])[-p_limit]
+    print top_5, bop_5
         
     
 def _new_comparador(seq1, seq2, matrix):
@@ -430,11 +431,9 @@ if __name__ == "__main__":
 # 3 = green, red (1, 3)
     args = argument_parser()
     if not args['infile'] or len(args['infile']) < 2:
-        print 'too few fasta files (need 3)'
+        print 'too few fasta files (need 2)'
         argument_parser(h=True)
-    print args
     if args['permutation_test']:
-        permutation_test(args['infile'], args['p_value'], args['matrix'], args['step'])
-    run(args['infile'], args['matrix'], args['alpha'], not args['no_lowpass'])
+        permutation_test(args['infile'], args['p_value'], args['matrix'], args['window'])
     #plot1, n1, plot2, n2, plot3, n3 = run(args['infile'], args['matrix'], args['alpha'], not args['no_lowpass'])
     #ploter(plot1, n1, plot2, n2, plot3, n3, args)
