@@ -358,6 +358,8 @@ def run(path, matrix, alpha=0.05, lowpass=True):
         matrix = BLOSUM
     elif matrix == 'ID_MATRIX':
         matrix = ID_MATRIX
+    elif matrix == 'ID_NUC':
+        matrix = ID_NUC
     rr = []
     listaseq1 = fasta_parser(path[0])
     listaseq2 = fasta_parser(path[1])
@@ -407,7 +409,6 @@ def ploter(plot1, cv1, plot2, cv2, plot3, cv3, args):
             color[i] = 0
             color = tuple(color)
             plot([p[n][0], p[n + 1][0]], [p[n][1], p[n + 1][1]], color = color)
-    
     # plot(x1, y1, '#009999', x2, y2, '#990099', x3, y3, '#999900', linewidth=1.3)
     title(args['title'])
     xlimit = args['xlim']
@@ -420,9 +421,7 @@ def ploter(plot1, cv1, plot2, cv2, plot3, cv3, args):
     if (ylimit[0] != 0 and ylimit[1] != 0) and (type(ylimit[0]) == type(ylimit[1]) == float):
         ylim(ylimit)
     rcParams.update({'font.size': args['font_size']})
-    savefig(args['outfile'], bbox_inches=0)
-    show()
-    clf()
+
 
 if __name__ == "__main__":
     # test: python visualseq.py -i ./test/p.fas ./test/f.fas ./test/m.fas -o ./test/out_test.png -t 'Test'
@@ -437,3 +436,6 @@ if __name__ == "__main__":
         permutation_test(args['infile'], args['p_value'], args['matrix'], args['window'])
     #plot1, n1, plot2, n2, plot3, n3 = run(args['infile'], args['matrix'], args['alpha'], not args['no_lowpass'])
     #ploter(plot1, n1, plot2, n2, plot3, n3, args)
+    #savefig(args['outfile'], bbox_inches=0)
+    #show()
+    #clf()
