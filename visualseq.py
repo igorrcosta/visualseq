@@ -128,10 +128,11 @@ def argument_parser(h=False, args=[]):
     parser = argparse.ArgumentParser(description='Prints an image comparing 3 multiple alignment files (1 group for file). \
                                      All sequences must have the same lenght.',
                                      argument_default=None)
+    #número qualquer de argumentos...
     parser.add_argument(
-        '-i', '--infile', nargs=3, metavar=('f1.fasta', 'f2.fasta', 'f3.fasta'), type = str,
+        '-i', '--infile', nargs='+', type = str, metavar='fasta_files',
         help = '3 multiple alignment fasta files (not necessarily the same number \
-                        of sequences in every file, but every sequence must have the same size).')
+        of sequences in every file, but every sequence must have the same size).')
     parser.add_argument(
         '-o', '--outfile', nargs='?', metavar='outfile', type=str, default='outfile.png',
         help='file where the image will be saved. (default: %(default)s)')
@@ -159,7 +160,13 @@ def argument_parser(h=False, args=[]):
         '-s', '--size', nargs=2, metavar=('width', 'height'), type = int, default = [16, 8],
         help = 'Size of the figure, Width Height. (default: %(default)s)')
     parser.add_argument(
-        '-n', '--no_lowpass', action='store_true', help='Disable the low_pass filter.')
+        '-n', '--no_lowpass', action='store_true', help='Flag to disable the low_pass filter.')
+    parser.add_argument(
+        '-p', '--permutation-test', action='store_true', help='Flag to do an exact permutation test of significance.')
+    parser.add_argument(
+        '-v', '--p-value', nargs='?', metavar='p-value', type=int, default=0.05, help='P-value limiar. (defaut: %(default)s)')
+    parser.add_argument(
+        '-w', '--window', nargs='?', metavar='window', type=int, default=0, help='K-mer window for the permutation test (0 for the full sequence). (defaut: %(default)s)')
 
     if h:
         args = parser.parse_args(['-h'])
@@ -197,6 +204,65 @@ def fasta_parser(fasta_file):
             return []
     return seq_dict.values()
 
+
+def permutation_test(path, pvalue, matrix, step):
+    if matrix == 'BLOSUM':
+        matrix = BLOSUM
+    elif matrix == 'ID_MATRIX':
+        matrix = ID_MATRIX
+    lseq1 = fasta_parser(path[0])
+    lseq2 = fasta_parser(path[1])
+    assert len(lseq1) > 0 and len(lseq2) > 0
+    L = len(lseq1)
+    len_seq = len(lseq1[0])
+    results = {}
+    mean_results = {}
+    if step == 0:
+        step = len_seq
+    for jan in range(0, len_seq, step):
+        results[jan] = []
+        n = 0
+        for perm in permutations(lseq1 + lseq2):
+            for s1 in perm[:L]:
+                for s2 in perm[L:]:
+                    results[jan].append(_janela(s1[jan:jan+step],
+                                        s2[jan:jan+step], matrix))
+                    n += 1
+    print n
+    p_limit = int(n * pvalue)
+    print p_limit
+    top_5 = sorted(results[jan])[p_limit]
+    bop_5 = sorted(results[jan])[-p_limit]
+    print top_5, bop_5
+        
+    
+def _new_comparador(seq1, seq2, matrix):
+    #prettier!
+    for i in zip(seq1, seq2):
+        if '-' not in i:
+            try:
+                yield matrix[i[0], i[1]]
+            except:
+                yield matrix[i[1], i[0]]
+        else:
+            yield '-'
+
+def _janela(seq1, seq2, matrix):
+    '''Usa o novo comparador para retornar o valor medio
+    da comparacao entre duas sequencias.'''
+    assert len(seq1) == len(seq2)
+    seq_len = len(seq1)
+    gap = 0
+    soma = 0
+    for result in _new_comparador(seq1, seq2, matrix):
+        if result != '-':
+            soma += result
+        else:
+            gap += 1
+    if seq_len - gap == 0:
+        return 0.0
+    else:
+        return float(soma)/(seq_len - gap)
 
 def comparador(lseq1, lseq2, matrix):
     mut, pon, comp, temp = [], [], [], []
@@ -287,17 +353,13 @@ def lowpass(dlist, a=0.05):
             alist[n] = i * a + (1 - a) * alist[n - 1]
     return alist
 
-def permutation_test(lseq1, lseq2, matrix):
-    l = len(lseq1)
-    results = []
-    for perm in permutations(lseq1 + lseq2):
-        results = comparador(perm[:l], perm[l:], matrix)
-        
 def run(path, matrix, alpha=0.05, lowpass=True):
     if matrix == 'BLOSUM':
         matrix = BLOSUM
     elif matrix == 'ID_MATRIX':
         matrix = ID_MATRIX
+    elif matrix == 'ID_NUC':
+        matrix = ID_NUC
     rr = []
     listaseq1 = fasta_parser(path[0])
     listaseq2 = fasta_parser(path[1])
@@ -347,7 +409,6 @@ def ploter(plot1, cv1, plot2, cv2, plot3, cv3, args):
             color[i] = 0
             color = tuple(color)
             plot([p[n][0], p[n + 1][0]], [p[n][1], p[n + 1][1]], color = color)
-    
     # plot(x1, y1, '#009999', x2, y2, '#990099', x3, y3, '#999900', linewidth=1.3)
     title(args['title'])
     xlimit = args['xlim']
@@ -360,9 +421,7 @@ def ploter(plot1, cv1, plot2, cv2, plot3, cv3, args):
     if (ylimit[0] != 0 and ylimit[1] != 0) and (type(ylimit[0]) == type(ylimit[1]) == float):
         ylim(ylimit)
     rcParams.update({'font.size': args['font_size']})
-    savefig(args['outfile'], bbox_inches=0)
-    show()
-    clf()
+
 
 if __name__ == "__main__":
     # test: python visualseq.py -i ./test/p.fas ./test/f.fas ./test/m.fas -o ./test/out_test.png -t 'Test'
@@ -371,8 +430,12 @@ if __name__ == "__main__":
 # 3 = green, red (1, 3)
     args = argument_parser()
     if not args['infile'] or len(args['infile']) < 2:
-        print 'too few fasta files (need 3)'
+        print 'too few fasta files (need 2)'
         argument_parser(h=True)
-    plot1, n1, plot2, n2, plot3, n3 = run(
-        args['infile'], args['matrix'], args['alpha'], not args['no_lowpass'])
-    ploter(plot1, n1, plot2, n2, plot3, n3, args)
+    if args['permutation_test']:
+        permutation_test(args['infile'], args['p_value'], args['matrix'], args['window'])
+    #plot1, n1, plot2, n2, plot3, n3 = run(args['infile'], args['matrix'], args['alpha'], not args['no_lowpass'])
+    #ploter(plot1, n1, plot2, n2, plot3, n3, args)
+    #savefig(args['outfile'], bbox_inches=0)
+    #show()
+    #clf()
