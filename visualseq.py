@@ -133,30 +133,30 @@ def argument_parser(h=False, args=[]):
                         of sequences in every file, but every sequence must have the same size).')
     parser.add_argument(
         '-o', '--outfile', nargs='?', metavar='outfile', type=str, default='outfile.png',
-        help='file where the image will be saved. (defaut: %(default)s)')
+        help='file where the image will be saved. (default: %(default)s)')
     parser.add_argument(
         '-t', '--title', nargs='?', metavar='\'Title\'', type=str, default='Title',
-        help='Title of the image. (defaut: %(default)s)')
+        help='Title of the image. (default: %(default)s)')
     parser.add_argument(
         '-a', '--alpha', nargs='?', metavar='alpha', type=float, default=0.05,
-        help='Value of the alpha parameter of the low-pass filter, lower means smoother. (defaut: %(default)s)')
+        help='Value of the alpha parameter of the low-pass filter, lower means smoother. (default: %(default)s)')
     parser.add_argument(
         '-m', '--matrix', nargs='?', metavar='matrix', type=str, choices=['BLOSUM', 'ID_MATRIX'], default='BLOSUM',
-        help='Comparison matrix to be used. (options: %(choices)s, defaut: %(default)s)')
+        help='Comparison matrix to be used. (options: %(choices)s, default: %(default)s)')
     parser.add_argument(
         '-x', '--xlim', nargs=2, metavar=('start', 'end'), type = float, default = [0, 0],
         help = 'Limit values for the start and end of the x axis.'
-        + 'If not specified, it is set to automatic. Both values must be numbers. (defaut: %(default)s)')
+        + 'If not specified, it is set to automatic. Both values must be numbers. (default: %(default)s)')
     parser.add_argument(
         '-y', '--ylim', nargs=2, metavar=('start', 'end'), type = float, default = [0, 0],
         help = 'Limit values for the start and end of the y axis.'
-        + 'If not specified, it is set to automatic. Both values must be numbers. (defaut: %(default)s)')
+        + 'If not specified, it is set to automatic. Both values must be numbers. (default: %(default)s)')
     parser.add_argument(
         '-f', '--font_size', nargs='?', metavar='size', type=int, default=18,
-        help='Font size of the axis labels and title. (defaut: %(default)s)')
+        help='Font size of the axis labels and title. (default: %(default)s)')
     parser.add_argument(
         '-s', '--size', nargs=2, metavar=('width', 'height'), type = int, default = [16, 8],
-        help = 'Size of the figure, Width Height. (defaut: %(default)s)')
+        help = 'Size of the figure, Width Height. (default: %(default)s)')
     parser.add_argument(
         '-n', '--no_lowpass', action='store_true', help='Disable the low_pass filter.')
 
