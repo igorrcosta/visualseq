@@ -311,6 +311,8 @@ def run(path, matrix, alpha=0.05, lowpass=True):
     else:
         y3 = []
         n3 = []
+    for data, points in zip((y1, n1), (y2, n2), (y3, n3)):
+        mean(data, points)
     if lowpass:
         y1 = avg_lowpass(y1, alpha)
         y2 = avg_lowpass(y2, alpha)
