@@ -29,6 +29,7 @@ OR PERFORMANCE OF THIS SOFTWARE.'''
 
 import argparse
 from os.path import isfile
+from math import sqrt
 from matplotlib.pyplot import show, plot, title, ylim, xlim, savefig, rcParams, clf
 
 
@@ -202,6 +203,7 @@ def comparador(lseq1, lseq2, matrix):
         size = len(lseq1[0])
     except:
         size = len(lseq2[0])
+    stats = {}
     mut = [0] * size
     pon = [0] * size
     for seq1 in lseq1:
@@ -212,6 +214,10 @@ def comparador(lseq1, lseq2, matrix):
                         bmt = matrix[(i[0], i[1])]
                     except KeyError:
                         bmt = matrix[(i[1], i[0])]
+                    try:
+                        stats[n].append(bmt)
+                    except:
+                        stats[n] = [bmt]
                     mut[n] += bmt
                     pon[n] += 1
     p = max(pon)
@@ -221,12 +227,11 @@ def comparador(lseq1, lseq2, matrix):
             i = float(m) / n
             comp.append(i)
         else:
-# comp.append(None)
             try:
                 comp.append(comp[-1])
             except IndexError:
                 comp.append(0)
-    return comp, pon
+    return comp, pon, stats
 
 
 def avg_lowpass(dlist, a=0.05):
@@ -286,6 +291,22 @@ def lowpass(dlist, a=0.05):
             alist[n] = i * a + (1 - a) * alist[n - 1]
     return alist
 
+def statistics(data):
+    alist = data[0]
+    y = data[1]
+    for n, points in alist.items():
+       print '\t'.join([str(s) for s in [n, len(points), std(points), mean(points), y[n]]])
+
+def mean(alist):
+   if len(alist) > 0:
+       return float(sum(alist))/len(alist)
+   else:
+       return 0
+
+def std(alist):
+    m = mean(alist)
+    diff_sum = sum([(abs(n - m))**2 for n in alist])
+    return sqrt(float(diff_sum)/len(alist))
 
 def run(path, matrix, alpha=0.05, lowpass=True):
     if matrix == 'BLOSUM':
@@ -297,26 +318,35 @@ def run(path, matrix, alpha=0.05, lowpass=True):
     listaseq2 = fasta_parser(path[1])
     listaseq3 = fasta_parser(path[2])
     if len(listaseq1) > 0 and len(listaseq2) > 0:
-        y1, n1 = comparador(listaseq1, listaseq2, matrix)
+        y1, n1, stats1 = comparador(listaseq1, listaseq2, matrix)
     else:
         y1 = []
         n1 = []
+        stats1 = {}
     if len(listaseq2) > 0 and len(listaseq3) > 0:
-        y2, n2 = comparador(listaseq2, listaseq3, matrix)
+        y2, n2, stats2 = comparador(listaseq2, listaseq3, matrix)
     else:
         y2 = []
         n2 = []
+        stats2 = {}
     if len(listaseq1) > 0 and len(listaseq3) > 0:
-        y3, n3 = comparador(listaseq1, listaseq3, matrix)
+        y3, n3, stats3 = comparador(listaseq1, listaseq3, matrix)
     else:
         y3 = []
         n3 = []
-    for data, points in zip((y1, n1), (y2, n2), (y3, n3)):
-        mean(data, points)
+        stats3 = {}
     if lowpass:
         y1 = avg_lowpass(y1, alpha)
         y2 = avg_lowpass(y2, alpha)
         y3 = avg_lowpass(y3, alpha)
+    for n, data in enumerate([(stats1, y1), (stats2, y2), (stats3, y3)]):
+        if n == 0:
+            print 'fungi X plants'
+        elif n == 1:
+            print 'fungi X metazoan'
+        elif n == 2:
+            print 'plant X metazoan'
+        statistics(data)
     x1 = [x + 1 for x in range(len(y1))]
     x2 = [x + 1 for x in range(len(y2))]
     x3 = [x + 1 for x in range(len(y3))]
@@ -331,44 +361,48 @@ def ploter(plot1, cv1, plot2, cv2, plot3, cv3, args):
     floor = 1
     factor = 0.9
     gap = 0.4
-    points = len(plot1)
-    limit_cv = float(max(cv1))
-    for n, c in zip(xrange(points - 1), cv1):
-        if c != 0:
-            intensity = factor * (floor + ((c * (1 - floor)) / limit_cv))
-        else:
-            intensity = gap
-        plot([plot1[n][0], plot1[n + 1][0]],
-             [plot1[n][1], plot1[n + 1][1]], color=(0, intensity, intensity))
-    points = len(plot2)
-    limit_cv = float(max(cv2))
-    for n, c in zip(xrange(points - 1), cv2):
-        if c != 0:
-            intensity = factor * (floor + ((c * (1 - floor)) / limit_cv))
-        else:
-            intensity = gap
-        plot([plot2[n][0], plot2[n + 1][0]], [plot2[n][1], plot2[n + 1][1]],
-             color=(intensity, 0, intensity))
-    points = len(plot3)
-    limit_cv = float(max(cv3))
-    for n, c in zip(xrange(points - 1), cv3):
-        if c != 0:
-            intensity = factor * (floor + ((c * (1 - floor)) / limit_cv))
-        else:
-            intensity = gap
-        plot([plot3[n][0], plot3[n + 1][0]],
-             [plot3[n][1], plot3[n + 1][1]], color=(intensity, intensity, 0))
+    intensity = 0.9
+    if len(cv1):
+        points = len(plot1)
+        limit_cv = float(max(cv1))
+        for n, c in zip(xrange(points - 1), cv1):
+#            if c != 0:
+#                intensity = factor * (floor + ((c * (1 - floor)) / limit_cv))
+#            else:
+#                intensity = gap
+            plot([plot1[n][0], plot1[n + 1][0]],
+                 [plot1[n][1], plot1[n + 1][1]], color=(0, intensity, intensity))
+    if len(cv2):
+        points = len(plot2)
+        limit_cv = float(max(cv2))
+        for n, c in zip(xrange(points - 1), cv2):
+#            if c != 0:
+#                intensity = factor * (floor + ((c * (1 - floor)) / limit_cv))
+#            else:
+#                intensity = gap
+            plot([plot2[n][0], plot2[n + 1][0]],
+                 [plot2[n][1], plot2[n + 1][1]], color=(intensity, 0, intensity))
+    if len(cv3):
+        points = len(plot3)
+        limit_cv = float(max(cv3))
+        for n, c in zip(xrange(points - 1), cv3):
+#            if c != 0:
+#                intensity = factor * (floor + ((c * (1 - floor)) / limit_cv))
+#            else:
+#                intensity = gap
+            plot([plot3[n][0], plot3[n + 1][0]],
+                 [plot3[n][1], plot3[n + 1][1]], color=(intensity, intensity, 0))
     # plot(x1, y1, '#009999', x2, y2, '#990099', x3, y3, '#999900', linewidth=
     # 1.3)
     title(args['title'])
     xlimit = args['xlim']
     ylimit = args['ylim']
-    if (xlimit[0] != 0 and xlimit[1] != 0) and (type(xlimit[0]) == type(xlimit[1]) == float):
+    if (xlimit[0] != 0 or xlimit[1] != 0) and (type(xlimit[0]) == type(xlimit[1]) == float):
         xlim(xlimit)
     else:
         xlimit = (1, max([len(plot1), len(plot2), len(plot3)]))
         xlim(xlimit)
-    if (ylimit[0] != 0 and ylimit[1] != 0) and (type(ylimit[0]) == type(ylimit[1]) == float):
+    if (ylimit[0] != 0 or ylimit[1] != 0) and (type(ylimit[0]) == type(ylimit[1]) == float):
         ylim(ylimit)
 # else:
 # ny = [y for y in y1 + y2 + y3 if y is not None]
